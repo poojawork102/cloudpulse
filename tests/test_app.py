@@ -1,6 +1,5 @@
-
 import pytest
-from app import app
+from app import app, VERSION
 
 
 @pytest.fixture()
@@ -22,6 +21,7 @@ def test_health_endpoint(client):
 
     assert response.status_code == 200
     assert response.json["status"] == "healthy"
+    assert response.json["version"] == VERSION
 
 
 def test_status_endpoint(client):
@@ -29,4 +29,5 @@ def test_status_endpoint(client):
 
     assert response.status_code == 200
     assert response.json["application"] == "CloudPulse"
-    assert response.json["version"] == "1.0.0"
+    # Compare against the app's own VERSION so a version bump doesn't break the pipeline
+    assert response.json["version"] == VERSION

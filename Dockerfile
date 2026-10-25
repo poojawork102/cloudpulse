@@ -1,4 +1,3 @@
-
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -13,6 +12,11 @@ COPY app.py .
 COPY templates ./templates
 COPY tests ./tests
 
+# Run as a non-root user
+RUN useradd --create-home appuser
+USER appuser
+
 EXPOSE 5000
 
-CMD ["python", "app.py"]
+# Production WSGI server instead of Flask's dev server
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "app:app"]
