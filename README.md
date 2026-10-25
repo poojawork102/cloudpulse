@@ -5,6 +5,9 @@
 
 # CloudPulse — Deployment Monitor
 
+**CCA 2 — Cloud Computing and DevOps | TY B.Tech CSE | MIT World Peace University**  
+Pooja Lingwat · Roll No. 42 · Panel C2 · PRN: 1262242831
+
 A Flask-based deployment monitor that tracks application health, version and uptime. Built as a CI/CD pipeline demonstration for CCA 2 (Cloud Computing and DevOps).
 
 The app exposes three endpoints:
@@ -83,7 +86,7 @@ The app runs on Minikube with the Docker driver:
 
 - **Deployment**: 2 replicas of the CloudPulse container, with readiness and liveness probes hitting `/health`
 - **Service**: NodePort type, maps port 80 → container port 5000, exposed on node port 30080
-- **Access**: Used `kubectl port-forward --address 0.0.0.0 svc/cloudpulse-service 8081:80` to make the app reachable at `http://<EC2-IP>:8081`
+- **Access**: Used `kubectl port-forward --address 0.0.0.0 svc/cloudpulse-service 8081:80` to make the app reachable at **http://3.111.41.151:8081**
 
 After deployment, `kubectl get pods` shows both replicas Running and `kubectl get svc` confirms the NodePort mapping.
 
