@@ -3,46 +3,61 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'cloudpulse'
-        CONTAINER_NAME = 'cloudpulse'
-        APP_PORT = '5000'
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
+        DOCKERHUB_REPO = 'pooja102/cloudpulse'
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
-        stage('Clone') {
+        stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Build') {
-            steps {
-                sh 'docker build -t cloudpulse:${BUILD_NUMBER} .'
-            }
-        }
-
-        stage('Test') {
+        stage('Build & Test') {
             steps {
                 sh '''
+                    docker build -t ${DOCKERHUB_REPO}:${IMAGE_TAG} .
                     docker run --rm \
                       --entrypoint python \
-                      cloudpulse:${BUILD_NUMBER} \
+                      ${DOCKERHUB_REPO}:${IMAGE_TAG} \
                       -m pytest -q
                 '''
             }
         }
 
-        stage('Deploy') {
+        stage('Push to Docker Hub') {
             steps {
                 sh '''
-                    docker stop cloudpulse || true
-                    docker rm cloudpulse || true
+                    echo "$DOCKERHUB_CREDENTIALS_PSW" | docker login -u "$DOCKERHUB_CREDENTIALS_USR" --password-stdin
+                    docker tag ${DOCKERHUB_REPO}:${IMAGE_TAG} ${DOCKERHUB_REPO}:latest
+                    docker push ${DOCKERHUB_REPO}:${IMAGE_TAG}
+                    docker push ${DOCKERHUB_REPO}:latest
+                    docker logout
+                '''
+            }
+        }
 
-                    docker run -d \
-                      --restart unless-stopped \
-                      --name cloudpulse \
-                      -p 5000:5000 \
-                      cloudpulse:${BUILD_NUMBER}
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh '''
+                    kubectl set image deployment/cloudpulse cloudpulse=${DOCKERHUB_REPO}:${IMAGE_TAG} || \
+                    kubectl apply -f k8s/
+                    kubectl rollout status deployment/cloudpulse --timeout=60s
+                '''
+            }
+        }
+
+        stage('Verify') {
+            steps {
+                sh '''
+                    echo "=== Pods ==="
+                    kubectl get pods -l app=cloudpulse
+                    echo "=== Deployment ==="
+                    kubectl get deployment cloudpulse
+                    echo "=== Service ==="
+                    kubectl get svc cloudpulse-service
                 '''
             }
         }
@@ -52,7 +67,6 @@ pipeline {
         success {
             echo 'CloudPulse pipeline completed successfully.'
         }
-
         failure {
             echo 'Pipeline failed. Check the stage logs.'
         }
